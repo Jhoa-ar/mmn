@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador EDO: campaña de reciclaje en el barrio</title>
+<style>
+  :root {
+    color-scheme: light;
+    --cafe-osc: #3e2518;
+    --cafe: #6f4426;
+    --cafe-medio: #8b5a35;
+    --caramelo: #c98a4b;
+    --crema: #f7efe3;
+    --tarjeta: #fffaf2;
+    --borde: #e2cfb6;
+    --texto: #2b1b10;
+    --gris: #7a6652;
+    --verde: #2e7d4f;
+    --rojo: #b03a2e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: var(--crema);
+    color: var(--texto);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--cafe-osc), var(--cafe-medio));
+    color: #fff;
+    padding: 30px 20px 26px;
+    border-bottom: 5px solid var(--caramelo);
+  }
+  header .interno { max-width: 1100px; margin: 0 auto; }
+  header h1 { margin: 0 0 8px; font-size: 1.7rem; }
+  header p { margin: 2px 0; opacity: .95; font-size: 1.05rem; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  section {
+    background: var(--tarjeta); border: 1px solid var(--borde);
+    border-top: 4px solid var(--caramelo);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  h2 { margin: 0 0 10px; color: var(--cafe); font-size: 1.25rem; }
+  h3 { margin: 14px 0 6px; color: var(--cafe-osc); font-size: 1.05rem; }
+  .ecuacion {
+    background: #f3e6d3; border-left: 4px solid var(--caramelo);
+    padding: 10px 14px; border-radius: 6px; font-family: "Cambria Math", "Times New Roman", serif;
+    font-size: 1.1rem; margin: 8px 0; overflow-x: auto;
+  }
+  .nota { color: var(--gris); font-size: .9rem; }
+  .aviso {
+    background: #fff1d6; border: 1px solid #e8c27a; color: #6b4a00;
+    padding: 8px 12px; border-radius: 8px; font-size: .9rem; margin-top: 8px;
+  }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .campo label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 3px; }
+  .campo small { color: var(--gris); display: block; margin-top: 2px; }
+  input[type=number] {
+    width: 100%; padding: 8px 10px; border: 1px solid #cdb597; border-radius: 8px; font-size: 1rem;
+    background: #fff;
+  }
+  input[type=number]:focus { outline: 2px solid var(--caramelo); border-color: var(--caramelo); }
+  .botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  button {
+    border: none; border-radius: 8px; padding: 9px 16px; font-size: .95rem; cursor: pointer;
+    background: var(--cafe); color: #fff; font-weight: 600;
+  }
+  button:hover { filter: brightness(1.12); }
+  button.sec { background: #ecdcc6; color: var(--cafe-osc); }
+  button.peligro { background: var(--rojo); }
+  button.chico { padding: 4px 10px; font-size: .8rem; }
+  #errores { color: var(--rojo); margin-top: 10px; font-weight: 600; }
+  #errores ul { margin: 4px 0 0 0; padding: 0; list-style: none; }
+  #errores li { border-left: 3px solid var(--rojo); padding-left: 8px; margin: 3px 0; }
+  .msg { margin-top: 8px; font-size: .92rem; font-weight: 600; }
+  .msg.mal { color: var(--rojo); }
+  .msg.bien { color: var(--verde); }
+  .tarjetas { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); margin: 10px 0 14px; }
+  .dato { border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; background: #fffdf8; }
+  .dato .tit { font-size: .8rem; color: var(--gris); }
+  .dato .val { font-size: 1.3rem; font-weight: 700; color: var(--cafe); }
+  .dato .sub { font-size: .8rem; color: var(--gris); }
+  canvas { width: 100%; height: 340px; display: block; background: #fff; border: 1px solid var(--borde); border-radius: 8px; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; margin: 6px 0; }
+  .leyenda span::before {
+    content: ""; display: inline-block; width: 22px; height: 4px; margin-right: 6px; vertical-align: middle; border-radius: 2px;
+    background: var(--c);
+  }
+  .tabla-scroll { overflow: auto; max-height: 360px; border: 1px solid var(--borde); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  th, td { padding: 6px 9px; text-align: right; border-bottom: 1px solid #efe2d0; white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--cafe); color: #fff; z-index: 1; }
+  td:first-child, th:first-child { text-align: center; }
+  tr:nth-child(even) td { background: #fbf4e9; }
+  .interpretacion p { margin: 8px 0; }
+  .ok { color: var(--verde); font-weight: 700; }
+  section ul { list-style: none; padding: 0; margin: 6px 0; }
+  section li, .paso { border-left: 3px solid var(--caramelo); padding: 2px 0 2px 10px; margin: 6px 0; }
+  .arquitectura { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin: 10px 0; }
+  .bloque {
+    flex: 1 1 150px; background: #f3e6d3; border: 1px solid var(--borde); border-radius: 10px;
+    padding: 10px; text-align: center; font-size: .9rem;
+  }
+  .bloque b { display: block; color: var(--cafe-osc); }
+  .flecha { align-self: center; font-size: 1.4rem; color: var(--caramelo); }
+  footer { text-align: center; color: var(--gris); font-size: .85rem; padding: 18px; }
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.35rem; }
+    .flecha { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="interno">
+    <h1>♻️ Simulador de EDO: ¿cuántas familias reciclan en el barrio?</h1>
+    <p>Elaborado por <b id="h-nombre"></b></p>
+  </div>
+</header>
+
+<main>
+
+  <!-- PROBLEMA -->
+  <section id="problema">
+    <h2>El problema que resuelve</h2>
+    <p>
+      En un barrio hay 200 familias. La junta vecinal lanza una campaña para que separen la basura (papel, plástico y vidrio).
+      Al inicio solo 10 familias reciclan, pero cada familia que recicla anima a sus vecinas, así que la costumbre se
+      difunde de boca en boca. Al principio crece despacio (hay pocas familias que contagien), después crece rápido y al
+      final se frena, porque ya casi no quedan familias por convencer.
+    </p>
+    <p>
+      <b>Pregunta del desafío:</b> ¿en cuántas semanas la mitad de las familias del barrio estará reciclando, y cuánto
+      ayuda una campaña más fuerte? ¿Y qué tan precisos son los métodos de Heun, RK2 y RK4 frente a la solución exacta?
+    </p>
+    <p><b>Comunidad beneficiaria:</b> las familias del barrio, la junta vecinal y el medio ambiente (menos basura en el botadero).</p>
+    <div class="aviso">
+      ⚠️ Los valores iniciales (200 familias, 10 al inicio y tasa de difusión 0,5) son <b>hipotéticos</b>.
+      Esta simulación ayuda a entender la situación; no es una predicción comprobada con datos reales.
+    </div>
+  </section>
+
+  <!-- MODELO -->
+  <section id="modelo">
+    <h2>Modelo matemático</h2>
+    <div class="grid">
+      <div>
+        <h3>Variables</h3>
+        <ul>
+          <li><b>t</b> (variable independiente): tiempo, en <b>semanas</b>.</li>
+          <li><b>y(t)</b> (variable dependiente): familias que reciclan, en <b>familias</b>.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Parámetros</h3>
+        <ul>
+          <li><b>r</b>: tasa de difusión, en <b>1/semana</b>. Mide qué tan rápido se contagia la costumbre.</li>
+          <li><b>K</b>: total de familias del barrio, en <b>familias</b>.</li>
+          <li><b>y₀</b>: familias que reciclan al inicio, en <b>familias</b>.</li>
+          <li><b>Meta</b>: número de familias que se quiere alcanzar, en <b>familias</b>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>EDO y condición inicial</h3>
+    <div class="ecuacion">dy/dt = r·y·(1 − y/K) &nbsp;&nbsp;,&nbsp;&nbsp; y(0) = y₀</div>
+    <p class="nota">
+      Justificación: cada semana se suman familias en proporción a las que ya reciclan (y, porque ellas convencen a las vecinas)
+      y a las que todavía faltan por convencer (1 − y/K). Si casi nadie recicla, se suman pocas; si ya recicla casi todo el barrio,
+      también se suman pocas. Supuestos: el número de familias del barrio no cambia, la difusión es igual en todo el barrio y
+      nadie deja de reciclar. Intervalo de simulación: de t = 0 hasta T semanas.
+    </p>
+
+    <h3>Solución analítica (exacta)</h3>
+    <div class="ecuacion">y(t) = K / ( 1 + B·e<sup>−r·t</sup> ) &nbsp;&nbsp; con &nbsp;&nbsp; B = (K − y₀) / y₀</div>
+    <div class="ecuacion">Tiempo para llegar a la meta: t = (1/r) · ln( meta·(K − y₀) / ( y₀·(K − meta) ) )</div>
+    <p class="nota">Se obtiene separando variables e integrando con fracciones parciales.</p>
+
+    <h3>Verificación por sustitución</h3>
+    <div class="paso"><b>Llamamos</b> u = B·e<sup>−r·t</sup>. Entonces y = K/(1 + u).</div>
+    <div class="paso"><b>Derivamos:</b> y′ = K·B·r·e<sup>−r·t</sup> / (1 + u)² = r·K·u / (1 + u)²</div>
+    <div class="paso"><b>Calculamos</b> r·y·(1 − y/K) = r·[K/(1 + u)]·[u/(1 + u)] = r·K·u / (1 + u)². Es igual a y′, entonces la EDO se cumple <span class="ok">✔</span></div>
+    <div class="paso"><b>Condición inicial:</b> y(0) = K/(1 + B) = K / (K/y₀) = y₀ <span class="ok">✔</span></div>
+
+    <h3>Métodos numéricos (mismos parámetros, y₀, intervalo y paso h)</h3>
+    <div class="ecuacion">Aquí f(t, y) = r·y·(1 − y/K)</div>
+    <div class="ecuacion">
+      Heun: &nbsp; k₁ = f(tₙ, yₙ) ; &nbsp; k₂ = f(tₙ + h, yₙ + h·k₁) ; &nbsp; yₙ₊₁ = yₙ + (h/2)·(k₁ + k₂)
+    </div>
+    <div class="ecuacion">
+      RK2 (punto medio): &nbsp; k₁ = f(tₙ, yₙ) ; &nbsp; k₂ = f(tₙ + h/2, yₙ + (h/2)·k₁) ; &nbsp; yₙ₊₁ = yₙ + h·k₂
+    </div>
+    <div class="ecuacion">
+      RK4: &nbsp; k₁ = f(tₙ, yₙ) ; &nbsp; k₂ = f(tₙ + h/2, yₙ + h·k₁/2) ; &nbsp; k₃ = f(tₙ + h/2, yₙ + h·k₂/2) ; &nbsp; k₄ = f(tₙ + h, yₙ + h·k₃) ;
+      &nbsp; yₙ₊₁ = yₙ + (h/6)·(k₁ + 2k₂ + 2k₃ + k₄)
+    </div>
+    <p class="nota">
+      Heun y RK2 son los dos métodos de orden 2: Heun promedia la pendiente del inicio y la del final del paso, y RK2 usa la
+      pendiente del centro del paso. RK4 combina cuatro pendientes y es de orden 4.
+    </p>
+  </section>
+
+  <!-- SIMULACION -->
+  <section id="simulacion">
+    <h2>Simulación</h2>
+    <div class="botones" style="margin-top:0; margin-bottom:12px">
+      <button class="sec" data-preset="base">Escenario base</button>
+      <button class="sec" data-preset="campana">Campaña más fuerte</button>
+      <button class="sec" data-preset="barrio">Barrio más grande</button>
+      <button class="sec" data-preset="pasogrande">Paso grande (h = 2)</button>
+    </div>
+
+    <div class="grid">
+      <div class="campo">
+        <label for="y0">Familias al inicio y₀</label>
+        <input type="number" id="y0" value="10" step="any">
+        <small>familias (mayor que 0 y menor o igual a K)</small>
+      </div>
+      <div class="campo">
+        <label for="K">Total de familias K</label>
+        <input type="number" id="K" value="200" step="any">
+        <small>familias (mayor que 0)</small>
+      </div>
+      <div class="campo">
+        <label for="r">Tasa de difusión r</label>
+        <input type="number" id="r" value="0.5" step="any">
+        <small>1/semana (mayor que 0)</small>
+      </div>
+      <div class="campo">
+        <label for="h">Tamaño de paso h</label>
+        <input type="number" id="h" value="1" step="any">
+        <small>semanas (mayor que 0 y menor o igual a T)</small>
+      </div>
+      <div class="campo">
+        <label for="T">Tiempo de simulación T</label>
+        <input type="number" id="T" value="20" step="any">
+        <small>semanas (máximo 5000 pasos)</small>
+      </div>
+      <div class="campo">
+        <label for="meta">Meta de familias</label>
+        <input type="number" id="meta" value="100" step="any">
+        <small>familias (entre 0 y K)</small>
+      </div>
+    </div>
+
+    <div class="botones">
+      <button id="btn-simular">▶ Simular</button>
+      <button id="btn-guardar" class="sec">💾 Guardar en historial</button>
+      <button id="btn-csv" class="sec">⬇ Descargar tabla (CSV)</button>
+    </div>
+    <div id="errores"></div>
+    <div id="aviso-T" class="nota"></div>
+  </section>
+
+  <!-- MEDICIONES POR TECLADO -->
+  <section id="mediciones">
+    <h2>Mis mediciones (opcional)</h2>
+    <p class="nota">
+      Escribe por teclado cuántas familias contaste que reciclan en distintas semanas y compáralas con el modelo.
+      Aparecen como rombos en la gráfica. También puedes pedir que la aplicación estime la tasa r a partir de tus datos.
+    </p>
+    <div class="grid">
+      <div class="campo">
+        <label for="tmed">Semana medida</label>
+        <input type="number" id="tmed" step="any" placeholder="ej. 3">
+        <small>semanas desde el inicio</small>
+      </div>
+      <div class="campo">
+        <label for="ymed">Familias que reciclan</label>
+        <input type="number" id="ymed" step="any" placeholder="ej. 40">
+        <small>familias</small>
+      </div>
+    </div>
+    <div class="botones">
+      <button id="btn-med-agregar">➕ Agregar medición</button>
+      <button id="btn-med-estimar" class="sec">🔎 Estimar r con mis datos</button>
+      <button id="btn-med-ejemplo" class="sec">Cargar datos de ejemplo</button>
+      <button id="btn-med-borrar" class="peligro">🗑 Borrar mediciones</button>
+    </div>
+    <div id="msg-med" class="msg"></div>
+    <div class="tabla-scroll" style="max-height:260px; margin-top:10px">
+      <table id="tabla-med">
+        <thead>
+          <tr><th>n</th><th>t (sem)</th><th>Familias medidas</th><th>Familias del modelo</th><th>Diferencia</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="nota" id="resumen-med"></p>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="resultados" hidden>
+    <h2>Resultados</h2>
+    <div class="tarjetas" id="tarjetas"></div>
+
+    <h3>Gráfica: solución analítica, Heun, RK2 y RK4</h3>
+    <div class="leyenda">
+      <span style="--c:#3b2417">Analítica</span>
+      <span style="--c:#e07b00">Heun</span>
+      <span style="--c:#2a9d8f">RK2</span>
+      <span style="--c:#1d6fb8">RK4</span>
+      <span style="--c:#b03a2e">Meta</span>
+      <span style="--c:#8a96a3">Total de familias K</span>
+      <span style="--c:#b5179e">Mis mediciones</span>
+    </div>
+    <canvas id="grafica"></canvas>
+
+    <h3>Gráfica de errores absolutos (escala logarítmica)</h3>
+    <div class="leyenda">
+      <span style="--c:#e07b00">Error Heun</span>
+      <span style="--c:#2a9d8f">Error RK2</span>
+      <span style="--c:#1d6fb8">Error RK4</span>
+    </div>
+    <canvas id="grafica-error"></canvas>
+
+    <h3>Tabla por pasos</h3>
+    <div class="tabla-scroll">
+      <table id="tabla">
+        <thead>
+          <tr>
+            <th>n</th><th>t (sem)</th><th>Analítica</th><th>Heun</th><th>RK2</th><th>RK4</th>
+            <th>Error Heun</th><th>Error RK2</th><th>Error RK4</th>
+            <th>% Error Heun</th><th>% Error RK2</th><th>% Error RK4</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3>Comparación con distintos tamaños de paso</h3>
+    <div class="tabla-scroll" style="max-height:none">
+      <table id="tabla-cmp">
+        <thead>
+          <tr>
+            <th>h (sem)</th><th>Pasos</th><th>Error máx. Heun</th><th>Error máx. RK2</th><th>Error máx. RK4</th>
+            <th>Reducción Heun</th><th>Reducción RK2</th><th>Reducción RK4</th><th>Menor error</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="nota">
+      «Reducción» indica cuántas veces bajó el error al dividir el paso entre 2. Heun y RK2 (orden 2) lo bajan unas 4 veces;
+      RK4 (orden 4) lo baja unas 16 veces.
+    </p>
+
+    <h3>Interpretación para la comunidad</h3>
+    <div class="interpretacion" id="interpretacion"></div>
+  </section>
+
+  <!-- BASE DE DATOS -->
+  <section id="historial-sec">
+    <h2>Historial de simulaciones (base de datos local)</h2>
+    <p class="nota">
+      Las simulaciones y las mediciones guardadas se almacenan en el navegador con <b>localStorage</b> (una pequeña base de datos
+      de clave y valor), así que se conservan aunque cierres la página.
+    </p>
+    <div class="tabla-scroll" style="max-height:300px">
+      <table id="tabla-hist">
+        <thead>
+          <tr>
+            <th>n</th><th>Fecha</th><th>y₀</th><th>K</th><th>r</th><th>h</th><th>T</th>
+            <th>Error máx. Heun</th><th>Error máx. RK2</th><th>Error máx. RK4</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="botones">
+      <button id="btn-hist-csv" class="sec">⬇ Exportar historial (CSV)</button>
+      <button id="btn-hist-borrar" class="peligro">🗑 Borrar todo</button>
+    </div>
+  </section>
+
+  <!-- ARQUITECTURA -->
+  <section id="arquitectura">
+    <h2>Enfoque de Ingeniería de Sistemas</h2>
+    <p>
+      Esta aplicación se diseñó como un sistema con entradas, procesos y salidas, siguiendo la forma de pensar de la
+      Ingeniería de Sistemas:
+    </p>
+    <div class="arquitectura">
+      <div class="bloque"><b>Entrada</b>y₀, K, r, h, T, meta y mediciones por teclado</div>
+      <div class="flecha">➜</div>
+      <div class="bloque"><b>Validación</b>revisa rangos y límites</div>
+      <div class="flecha">➜</div>
+      <div class="bloque"><b>Motor numérico</b>analítica, Heun, RK2 y RK4</div>
+      <div class="flecha">➜</div>
+      <div class="bloque"><b>Salida</b>tablas, gráficas, errores e interpretación</div>
+      <div class="flecha">➜</div>
+      <div class="bloque"><b>Almacenamiento</b>historial y mediciones en localStorage</div>
+    </div>
+    <p class="nota">
+      Tecnologías: HTML, CSS y JavaScript puro (sin librerías externas), gráficas dibujadas con Canvas y persistencia con
+      localStorage. Funciona sin instalación y sin conexión a internet.
+    </p>
+  </section>
+
+  <!-- LIMITACIONES -->
+  <section id="limitaciones">
+    <h2>Limitaciones del modelo</h2>
+    <ul>
+      <li>Los parámetros son hipotéticos; para usarlo en un barrio real hay que contar las familias que reciclan cada semana y estimar r con esos datos.</li>
+      <li>Se supone que el total de familias es fijo y que la difusión es igual en todo el barrio.</li>
+      <li>No se considera que algunas familias dejen de reciclar ni el efecto de nuevas campañas a mitad del proceso.</li>
+      <li>El modelo trata a las familias como una cantidad continua (permite decimales), aunque en la realidad son números enteros.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <span id="pie"></span>
+</footer>
+
+<script>
+"use strict";
+
+/* ============================================================
+   DATOS DEL AUTOR (cámbialos aquí si hace falta)
+   ============================================================ */
+const AUTOR = {
+  nombre: "Jhoana Nicol Calderón Quispe",
+  carrera: "Estudiante de Ingeniería en Sistemas",
+  universidad: "UMSA, Bolivia"
+};
+
+const DB_HIST = "edo_reciclaje_historial_v1";
+const DB_MED = "edo_reciclaje_mediciones_v1";
+const MAX_PASOS = 5000;
+const MAX_MED = 100;
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+
+function fmt(x, d = 4) {
+  if (!isFinite(x)) return "—";
+  if (x !== 0 && Math.abs(x) < 1e-3) return x.toExponential(3);
+  return x.toFixed(d);
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ============================================================
+   MODELO LOGÍSTICO:  dy/dt = r * y * (1 - y/K)   con   y(0) = y0
+   ============================================================ */
+function f(t, y, p) {
+  return p.r * y * (1 - y / p.K);
+}
+
+// Solución analítica: y(t) = K / (1 + B e^(-r t)),  B = (K - y0) / y0
+function exacta(t, p) {
+  const B = (p.K - p.y0) / p.y0;
+  return p.K / (1 + B * Math.exp(-p.r * t));
+}
+
+// Tiempo en que la solución exacta llega a un valor v (0 < v < K, v > y0)
+function tiempoHasta(v, p) {
+  return (1 / p.r) * Math.log((v * (p.K - p.y0)) / (p.y0 * (p.K - v)));
+}
+
+/* ============================================================
+   MÉTODO DE HEUN (Runge-Kutta de orden 2: promedia pendientes inicio y final)
+   ============================================================ */
+function heun(p, h, n) {
+  const y = [p.y0];
+  for (let i = 0; i < n; i++) {
+    const t = i * h;
+    const k1 = f(t, y[i], p);
+    const k2 = f(t + h, y[i] + h * k1, p);
+    y.push(y[i] + (h / 2) * (k1 + k2));
+  }
+  return y;
+}
+
+/* ============================================================
+   MÉTODO RK2 (punto medio: usa la pendiente en el centro del paso)
+   ============================================================ */
+function rk2(p, h, n) {
+  const y = [p.y0];
+  for (let i = 0; i < n; i++) {
+    const t = i * h;
+    const k1 = f(t, y[i], p);
+    const k2 = f(t + h / 2, y[i] + (h / 2) * k1, p);
+    y.push(y[i] + h * k2);
+  }
+  return y;
+}
+
+/* ============================================================
+   MÉTODO DE RUNGE-KUTTA DE ORDEN 4 (RK4 clásico)
+   ============================================================ */
+function rk4(p, h, n) {
+  const y = [p.y0];
+  for (let i = 0; i < n; i++) {
+    const t = i * h;
+    const k1 = f(t, y[i], p);
+    const k2 = f(t + h / 2, y[i] + (h * k1) / 2, p);
+    const k3 = f(t + h / 2, y[i] + (h * k2) / 2, p);
+    const k4 = f(t + h, y[i] + h * k3, p);
+    y.push(y[i] + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4));
+  }
+  return y;
+}
+
+/* ============================================================
+   SIMULACIÓN COMPLETA (analítica + Heun + RK2 + RK4 + errores)
+   ============================================================ */
+function simular(p, h, tFin) {
+  const n = Math.round(tFin / h);
+  const t = [], ex = [];
+  for (let i = 0; i <= n; i++) {
+    t.push(i * h);
+    ex.push(exacta(i * h, p));
+  }
+  const he = heun(p, h, n);
+  const r2 = rk2(p, h, n);
+  const r4 = rk4(p, h, n);
+
+  const err = (a) => a.map((v, i) => Math.abs(ex[i] - v));
+  // error relativo porcentual (solo si el valor exacto no es cero)
+  const rel = (e) => e.map((v, i) => (ex[i] > 1e-9 ? (v / ex[i]) * 100 : NaN));
+  const mx = (a) => a.reduce((m, v) => (v > m ? v : m), 0);
+
+  const eH = err(he), eM = err(r2), eR = err(r4);
+  return {
+    h, n, tFin: n * h, t, ex, he, r2, r4,
+    eH, eM, eR, rH: rel(eH), rM: rel(eM), rR: rel(eR),
+    maxH: mx(eH), maxM: mx(eM), maxR: mx(eR)
+  };
+}
+
+function nombreMejor(maxH, maxM, maxR) {
+  const m = Math.min(maxH, maxM, maxR);
+  const M = Math.max(maxH, maxM, maxR);
+  if (M - m < 1e-15) return "Igual";
+  if (m === maxR) return "RK4";
+  if (m === maxM) return "RK2";
+  return "Heun";
+}
+
+/* ============================================================
+   LECTURA Y VALIDACIÓN DE ENTRADAS
+   ============================================================ */
+function leerParametros() {
+  return {
+    y0: parseFloat($("y0").value),
+    K: parseFloat($("K").value),
+    r: parseFloat($("r").value),
+    h: parseFloat($("h").value),
+    T: parseFloat($("T").value),
+    meta: parseFloat($("meta").value)
+  };
+}
+
+function validar(p) {
+  const e = [];
+  const num = (v) => typeof v === "number" && isFinite(v);
+  if (!num(p.K) || p.K <= 0) e.push("K debe ser un número mayor que 0 (familias).");
+  if (!num(p.y0) || p.y0 <= 0) e.push("y₀ debe ser un número mayor que 0 (familias).");
+  if (num(p.y0) && num(p.K) && p.K > 0 && p.y0 > p.K) e.push("y₀ no puede ser mayor que K (el total de familias).");
+  if (!num(p.r) || p.r <= 0) e.push("r debe ser un número mayor que 0 (1/semana).");
+  if (!num(p.T) || p.T <= 0) e.push("T debe ser un número mayor que 0 (semanas).");
+  if (!num(p.h) || p.h <= 0) e.push("h debe ser un número mayor que 0 (semanas).");
+  if (num(p.h) && num(p.T) && p.h > p.T) e.push("h no puede ser mayor que T.");
+  if (num(p.h) && num(p.T) && p.h > 0 && p.T / p.h > MAX_PASOS) {
+    e.push("Demasiados pasos (" + Math.round(p.T / p.h) + "). El máximo permitido es " + MAX_PASOS + ". Aumenta h o reduce T.");
+  }
+  if (!num(p.meta) || p.meta < 0) e.push("La meta debe ser un número mayor o igual a 0 (familias).");
+  if (num(p.meta) && num(p.K) && p.K > 0 && p.meta > p.K) e.push("La meta no puede ser mayor que K (el total de familias).");
+  return e;
+}
+
+/* ============================================================
+   GRÁFICAS CON CANVAS (sin librerías externas)
+   ============================================================ */
+function pasoBonito(rango) {
+  const pot = Math.pow(10, Math.floor(Math.log10(rango)));
+  const fr = rango / pot;
+  const paso = fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10;
+  return paso * pot;
+}
+
+/*
+ cfg = { xmin, xmax, ymin, ymax, log, xlabel, ylabel,
+         series: [{x, y, color, width, marcador, soloPuntos}],
+         lineasH: [{y, color}] }
+*/
+function dibujar(canvas, cfg) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const m = { l: 70, r: 16, t: 14, b: 46 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const tr = (v) => (cfg.log ? Math.log10(v) : v);
+  const X = (x) => m.l + ((x - cfg.xmin) / (cfg.xmax - cfg.xmin)) * pw;
+  const Y = (v) => m.t + ph - ((tr(v) - tr(cfg.ymin)) / (tr(cfg.ymax) - tr(cfg.ymin))) * ph;
+
+  ctx.font = "12px Segoe UI, Arial, sans-serif";
+  ctx.fillStyle = "#7a6652";
+  ctx.strokeStyle = "#eadcc7";
+  ctx.lineWidth = 1;
+
+  // Cuadrícula y marcas del eje Y
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  if (cfg.log) {
+    for (let e = Math.log10(cfg.ymin); e <= Math.log10(cfg.ymax) + 1e-9; e++) {
+      const v = Math.pow(10, e), yy = Y(v);
+      ctx.beginPath(); ctx.moveTo(m.l, yy); ctx.lineTo(m.l + pw, yy); ctx.stroke();
+      ctx.fillText("1e" + Math.round(e), m.l - 8, yy);
+    }
+  } else {
+    const paso = pasoBonito((cfg.ymax - cfg.ymin) / 5);
+    for (let v = Math.ceil(cfg.ymin / paso) * paso; v <= cfg.ymax + 1e-9; v += paso) {
+      const yy = Y(v);
+      ctx.beginPath(); ctx.moveTo(m.l, yy); ctx.lineTo(m.l + pw, yy); ctx.stroke();
+      ctx.fillText(+v.toFixed(6) + "", m.l - 8, yy);
+    }
+  }
+
+  // Marcas del eje X
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const pasoX = pasoBonito((cfg.xmax - cfg.xmin) / 8);
+  for (let v = Math.ceil(cfg.xmin / pasoX) * pasoX; v <= cfg.xmax + 1e-9; v += pasoX) {
+    const xx = X(v);
+    ctx.beginPath(); ctx.moveTo(xx, m.t); ctx.lineTo(xx, m.t + ph); ctx.stroke();
+    ctx.fillText(+v.toFixed(6) + "", xx, m.t + ph + 6);
+  }
+
+  // Ejes
+  ctx.strokeStyle = "#8b7560";
+  ctx.beginPath();
+  ctx.moveTo(m.l, m.t); ctx.lineTo(m.l, m.t + ph); ctx.lineTo(m.l + pw, m.t + ph);
+  ctx.stroke();
+
+  // Etiquetas de ejes
+  ctx.fillStyle = "#2b1b10";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(cfg.xlabel, m.l + pw / 2, H - 6);
+  ctx.save();
+  ctx.translate(14, m.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(cfg.ylabel, 0, 0);
+  ctx.restore();
+
+  // Recorte al área de dibujo
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(m.l - 6, m.t - 6, pw + 12, ph + 12);
+  ctx.clip();
+
+  // Líneas horizontales (meta, total K)
+  (cfg.lineasH || []).forEach((lh) => {
+    if (!isFinite(lh.y) || (cfg.log && lh.y <= 0)) return;
+    ctx.strokeStyle = lh.color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(m.l, Y(lh.y)); ctx.lineTo(m.l + pw, Y(lh.y)); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Series
+  cfg.series.forEach((s) => {
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+    ctx.lineWidth = s.width || 2;
+
+    if (!s.soloPuntos) {
+      ctx.beginPath();
+      let abierto = false;
+      for (let i = 0; i < s.x.length; i++) {
+        const v = s.y[i];
+        if (!isFinite(v) || (cfg.log && v <= 0)) { abierto = false; continue; }
+        const xx = X(s.x[i]), yy = Y(v);
+        if (!abierto) { ctx.moveTo(xx, yy); abierto = true; } else { ctx.lineTo(xx, yy); }
+      }
+      ctx.stroke();
+    }
+
+    if (s.marcador && (s.soloPuntos || s.x.length <= 80)) {
+      for (let i = 0; i < s.x.length; i++) {
+        const v = s.y[i];
+        if (!isFinite(v) || (cfg.log && v <= 0)) continue;
+        const xx = X(s.x[i]), yy = Y(v);
+        ctx.beginPath();
+        if (s.marcador === "cuadrado") {
+          ctx.rect(xx - 3.5, yy - 3.5, 7, 7);
+        } else if (s.marcador === "triangulo") {
+          ctx.moveTo(xx, yy - 4.5); ctx.lineTo(xx + 4.5, yy + 3.5); ctx.lineTo(xx - 4.5, yy + 3.5); ctx.closePath();
+        } else if (s.marcador === "rombo") {
+          ctx.moveTo(xx, yy - 6); ctx.lineTo(xx + 6, yy); ctx.lineTo(xx, yy + 6); ctx.lineTo(xx - 6, yy); ctx.closePath();
+        } else {
+          ctx.arc(xx, yy, 3.5, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+  });
+  ctx.restore();
+}
+
+function graficarSolucion(p, sim) {
+  // Curva analítica suave (200 puntos)
+  const xs = [], ys = [];
+  const N = 200;
+  for (let i = 0; i <= N; i++) {
+    const t = (sim.tFin * i) / N;
+    xs.push(t); ys.push(exacta(t, p));
+  }
+  const med = leerMed().filter((d) => d.t <= sim.tFin + 1e-9);
+  const todos = [].concat(sim.ex, sim.he, sim.r2, sim.r4, [p.meta, p.K, 0], med.map((d) => d.y));
+  let ymin = todos.reduce((a, b) => (b < a ? b : a), Infinity);
+  let ymax = todos.reduce((a, b) => (b > a ? b : a), -Infinity);
+  if (ymax - ymin < 1e-9) { ymin -= 1; ymax += 1; }
+  const pad = (ymax - ymin) * 0.06;
+
+  const series = [
+    { x: xs, y: ys, color: "#3b2417", width: 2.5 },
+    { x: sim.t, y: sim.he, color: "#e07b00", width: 1.8, marcador: "cuadrado" },
+    { x: sim.t, y: sim.r2, color: "#2a9d8f", width: 1.8, marcador: "triangulo" },
+    { x: sim.t, y: sim.r4, color: "#1d6fb8", width: 1.8, marcador: "circulo" }
+  ];
+  if (med.length) {
+    series.push({ x: med.map((d) => d.t), y: med.map((d) => d.y), color: "#b5179e", marcador: "rombo", soloPuntos: true });
+  }
+
+  dibujar($("grafica"), {
+    xmin: 0, xmax: sim.tFin, ymin: Math.max(0, ymin - pad), ymax: ymax + pad,
+    log: false, xlabel: "Tiempo t (semanas)", ylabel: "Familias que reciclan y(t)",
+    lineasH: [{ y: p.meta, color: "#b03a2e" }, { y: p.K, color: "#8a96a3" }],
+    series
+  });
+}
+
+function graficarErrores(sim) {
+  const positivos = sim.eH.concat(sim.eM, sim.eR).filter((v) => v > 1e-16);
+  const cv = $("grafica-error");
+  if (positivos.length === 0) {
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(cv.clientWidth * dpr);
+    cv.height = Math.round(cv.clientHeight * dpr);
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+    ctx.fillStyle = "#7a6652";
+    ctx.font = "14px Segoe UI, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Los errores son prácticamente 0 en este escenario.", cv.clientWidth / 2, cv.clientHeight / 2);
+    return;
+  }
+  const lo = Math.floor(Math.log10(positivos.reduce((a, b) => (b < a ? b : a), Infinity)));
+  const hi = Math.ceil(Math.log10(positivos.reduce((a, b) => (b > a ? b : a), 0)));
+  dibujar(cv, {
+    xmin: 0, xmax: sim.tFin, ymin: Math.pow(10, lo), ymax: Math.pow(10, Math.max(hi, lo + 1)),
+    log: true, xlabel: "Tiempo t (semanas)", ylabel: "Error absoluto (familias)",
+    series: [
+      { x: sim.t, y: sim.eH, color: "#e07b00", width: 2, marcador: "cuadrado" },
+      { x: sim.t, y: sim.eM, color: "#2a9d8f", width: 2, marcador: "triangulo" },
+      { x: sim.t, y: sim.eR, color: "#1d6fb8", width: 2, marcador: "circulo" }
+    ]
+  });
+}
+
+/* ============================================================
+   TABLAS
+   ============================================================ */
+function llenarTabla(sim) {
+  const tb = $("tabla").querySelector("tbody");
+  const pc = (v) => (isNaN(v) ? "—" : fmt(v, 4));
+  const filas = [];
+  for (let i = 0; i <= sim.n; i++) {
+    filas.push(
+      "<tr><td>" + i + "</td><td>" + fmt(sim.t[i], 3) + "</td><td>" + fmt(sim.ex[i], 4) +
+      "</td><td>" + fmt(sim.he[i], 4) + "</td><td>" + fmt(sim.r2[i], 4) + "</td><td>" + fmt(sim.r4[i], 4) +
+      "</td><td>" + fmt(sim.eH[i], 4) + "</td><td>" + fmt(sim.eM[i], 4) + "</td><td>" + fmt(sim.eR[i], 4) +
+      "</td><td>" + pc(sim.rH[i]) + "</td><td>" + pc(sim.rM[i]) + "</td><td>" + pc(sim.rR[i]) + "</td></tr>"
+    );
+  }
+  tb.innerHTML = filas.join("");
+}
+
+function comparar(p, sim) {
+  // Tres tamaños de paso: h, h/2 y h/4 (sobre el mismo intervalo)
+  const pasos = [sim.h, sim.h / 2, sim.h / 4];
+  const res = [];
+  pasos.forEach((hh) => {
+    if (Math.round(sim.tFin / hh) <= 20000) res.push(simular(p, hh, sim.tFin));
+  });
+  const red = (prev, cur) => (prev > 0 && cur > 0 ? "×" + (prev / cur).toFixed(1) : "—");
+  const tb = $("tabla-cmp").querySelector("tbody");
+  tb.innerHTML = res.map((r, i) => {
+    const a = i > 0 ? res[i - 1] : null;
+    return "<tr><td>" + fmt(r.h, 4) + "</td><td>" + r.n + "</td><td>" + fmt(r.maxH, 4) + "</td><td>" + fmt(r.maxM, 4) +
+      "</td><td>" + fmt(r.maxR, 4) + "</td><td>" + (a ? red(a.maxH, r.maxH) : "—") +
+      "</td><td>" + (a ? red(a.maxM, r.maxM) : "—") + "</td><td>" + (a ? red(a.maxR, r.maxR) : "—") +
+      "</td><td>" + nombreMejor(r.maxH, r.maxM, r.maxR) + "</td></tr>";
+  }).join("");
+  return res;
+}
+
+/* ============================================================
+   TARJETAS E INTERPRETACIÓN
+   ============================================================ */
+function tarjetas(p, sim) {
+  const u = sim.n;
+  const pct = (v) => fmt((v / p.K) * 100, 1) + "% del barrio";
+
+  let tMitad = "—", subMitad = "";
+  if (p.y0 < p.K / 2) {
+    tMitad = fmt(tiempoHasta(p.K / 2, p), 2) + " sem";
+    subMitad = "cuando recicla la mitad";
+  }
+  let tMeta = "—", subMeta = "";
+  if (p.meta > p.y0 && p.meta < p.K) {
+    tMeta = fmt(tiempoHasta(p.meta, p), 2) + " sem";
+    subMeta = "hasta " + fmt(p.meta, 0) + " familias";
+  }
+
+  const items = [
+    ["Analítica en t = " + fmt(sim.tFin, 2), fmt(sim.ex[u], 2) + " familias", pct(sim.ex[u])],
+    ["Heun en t = " + fmt(sim.tFin, 2), fmt(sim.he[u], 2) + " familias", "error: " + fmt(sim.eH[u], 4)],
+    ["RK2 en t = " + fmt(sim.tFin, 2), fmt(sim.r2[u], 2) + " familias", "error: " + fmt(sim.eM[u], 4)],
+    ["RK4 en t = " + fmt(sim.tFin, 2), fmt(sim.r4[u], 2) + " familias", "error: " + fmt(sim.eR[u], 4)],
+    ["Mitad del barrio", tMitad, subMitad],
+    ["Tiempo hasta la meta", tMeta, subMeta]
+  ];
+  $("tarjetas").innerHTML = items.map((it) =>
+    '<div class="dato"><div class="tit">' + it[0] + '</div><div class="val">' + it[1] + '</div><div class="sub">' + it[2] + "</div></div>"
+  ).join("");
+}
+
+function interpretar(p, sim) {
+  const fin = sim.ex[sim.n];
+  let h = "";
+
+  h += "<p><b>¿Qué pasa en el barrio?</b> La campaña empieza con " + fmt(p.y0, 0) + " familias que reciclan (" +
+       fmt((p.y0 / p.K) * 100, 1) + "% del barrio). Crece <b>despacio al principio, rápido en el medio y se frena al final</b>, " +
+       "y se acerca a las " + fmt(p.K, 0) + " familias del barrio. Después de " + fmt(sim.tFin, 2) + " semanas reciclan " +
+       fmt(fin, 1) + " familias (" + fmt((fin / p.K) * 100, 1) + "% del barrio).</p>";
+
+  if (p.y0 < p.K / 2) {
+    const tm = tiempoHasta(p.K / 2, p);
+    h += "<p><b>El mejor momento de la campaña:</b> cuando recicla la mitad del barrio (a las " + fmt(tm, 2) +
+         " semanas) es cuando más familias nuevas se suman: unas " + fmt((p.r * p.K) / 4, 1) + " familias por semana.</p>";
+  }
+
+  if (Math.abs(p.meta - p.y0) < 1e-9 || p.meta < p.y0) {
+    h += "<p><b>Meta:</b> la meta de " + fmt(p.meta, 0) + " familias ya se cumple desde el inicio.</p>";
+  } else if (p.meta >= p.K) {
+    h += "<p><b>Meta:</b> con una meta igual al total del barrio nunca se llega exactamente: el número de familias se acerca a " +
+         fmt(p.K, 0) + " pero no lo alcanza. Prueba con una meta un poco menor, por ejemplo el 95%.</p>";
+  } else {
+    const tm = tiempoHasta(p.meta, p);
+    h += "<p><b>Respuesta a la pregunta del desafío:</b> según la solución exacta, el barrio llega a " + fmt(p.meta, 0) +
+         " familias reciclando en aproximadamente <b>" + fmt(tm, 2) + " semanas</b>. Una campaña más fuerte (r mayor) acorta ese tiempo.";
+    if (tm > sim.tFin) h += " Tu simulación termina antes (T = " + fmt(sim.tFin, 2) + "); aumenta T para verlo en la gráfica.";
+    h += "</p>";
+  }
+
+  if (sim.maxH === 0 && sim.maxM === 0 && sim.maxR === 0) {
+    h += "<p><b>Métodos numéricos:</b> en este escenario los tres coinciden con la solución exacta.</p>";
+  } else {
+    const mejor = nombreMejor(sim.maxH, sim.maxM, sim.maxR);
+    h += "<p><b>Métodos numéricos:</b> con h = " + fmt(sim.h, 3) + " semanas, el error máximo de Heun es " + fmt(sim.maxH, 4) +
+         " familias, el de RK2 es " + fmt(sim.maxM, 4) + " y el de RK4 es " + fmt(sim.maxR, 4) + ". El método con <b>menor error fue " +
+         mejor + "</b>. Al hacer el paso más pequeño los tres mejoran, pero RK4 mejora mucho más rápido.</p>";
+  }
+
+  h += '<p class="nota">Recuerda: los parámetros son hipotéticos; esto es una simulación para comprender el comportamiento, no una predicción comprobada con datos reales.</p>';
+  $("interpretacion").innerHTML = h;
+}
+
+/* ============================================================
+   FLUJO PRINCIPAL
+   ============================================================ */
+let ultimo = null; // última simulación válida (para redibujar y guardar)
+
+function ejecutar() {
+  const p = leerParametros();
+  const errs = validar(p);
+  const caja = $("errores");
+  if (errs.length) {
+    caja.innerHTML = "Revisa los datos:<ul>" + errs.map((e) => "<li>" + esc(e) + "</li>").join("") + "</ul>";
+    $("aviso-T").textContent = "";
+    mostrarMed();
+    return;
+  }
+  caja.innerHTML = "";
+
+  const n = Math.floor(p.T / p.h + 1e-9);
+  const tFin = n * p.h;
+  $("aviso-T").textContent = Math.abs(tFin - p.T) > 1e-9
+    ? "Nota: T se ajustó a " + fmt(tFin, 4) + " semanas para que sea un múltiplo exacto de h."
+    : "";
+
+  const sim = simular(p, p.h, tFin);
+  comparar(p, sim);
+  ultimo = { p, sim };
+
+  $("resultados").hidden = false;
+  tarjetas(p, sim);
+  llenarTabla(sim);
+  interpretar(p, sim);
+  graficarSolucion(p, sim);
+  graficarErrores(sim);
+  mostrarMed();
+}
+
+/* ============================================================
+   ESCENARIOS PREDEFINIDOS
+   ============================================================ */
+const PRESETS = {
+  base:       { y0: 10, K: 200, r: 0.5, h: 1, T: 20, meta: 100 },
+  campana:    { y0: 10, K: 200, r: 0.9, h: 1, T: 20, meta: 100 },
+  barrio:     { y0: 10, K: 500, r: 0.5, h: 1, T: 24, meta: 250 },
+  pasogrande: { y0: 10, K: 200, r: 0.5, h: 2, T: 20, meta: 100 }
+};
+
+function aplicarPreset(nombre) {
+  const v = PRESETS[nombre];
+  Object.keys(v).forEach((c) => { $(c).value = v[c]; });
+  ejecutar();
+}
+
+/* ============================================================
+   MEDICIONES INGRESADAS POR TECLADO (guardadas en localStorage)
+   ============================================================ */
+function leerMed() {
+  try {
+    const txt = localStorage.getItem(DB_MED);
+    const l = txt ? JSON.parse(txt) : [];
+    return Array.isArray(l) ? l : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function escribirMed(lista) {
+  try {
+    localStorage.setItem(DB_MED, JSON.stringify(lista));
+    return true;
+  } catch (e) {
+    alert("No se pudo guardar en el navegador (almacenamiento no disponible).");
+    return false;
+  }
+}
+
+function mensajeMed(texto, tipo) {
+  const c = $("msg-med");
+  c.textContent = texto;
+  c.className = "msg " + (tipo || "");
+}
+
+function refrescarGraficas() {
+  if (ultimo) graficarSolucion(ultimo.p, ultimo.sim);
+}
+
+function agregarMed() {
+  const t = parseFloat($("tmed").value);
+  const y = parseFloat($("ymed").value);
+  if (!isFinite(t) || !isFinite(y)) { mensajeMed("Escribe la semana y el número de familias como números.", "mal"); return; }
+  if (t < 0) { mensajeMed("La semana no puede ser negativa.", "mal"); return; }
+  if (y < 0) { mensajeMed("El número de familias no puede ser negativo.", "mal"); return; }
+  const lista = leerMed();
+  if (lista.length >= MAX_MED) { mensajeMed("Máximo " + MAX_MED + " mediciones.", "mal"); return; }
+  lista.push({ t: t, y: y });
+  lista.sort((a, b) => a.t - b.t);
+  if (!escribirMed(lista)) return;
+  $("tmed").value = "";
+  $("ymed").value = "";
+  mensajeMed("Medición agregada.", "bien");
+  mostrarMed();
+  refrescarGraficas();
+  $("tmed").focus();
+}
+
+function borrarMedFila(i) {
+  const lista = leerMed();
+  lista.splice(i, 1);
+  escribirMed(lista);
+  mensajeMed("", "");
+  mostrarMed();
+  refrescarGraficas();
+}
+
+function borrarMedTodo() {
+  if (!leerMed().length) return;
+  if (confirm("¿Borrar todas las mediciones?")) {
+    escribirMed([]);
+    mensajeMed("", "");
+    mostrarMed();
+    refrescarGraficas();
+  }
+}
+
+function cargarEjemplo() {
+  if (leerMed().length && !confirm("Esto reemplaza tus mediciones actuales por datos de ejemplo. ¿Continuar?")) return;
+  escribirMed([
+    { t: 0, y: 10 }, { t: 2, y: 27 }, { t: 4, y: 54 }, { t: 6, y: 105 }, { t: 8, y: 146 }, { t: 10, y: 180 }
+  ]);
+  mensajeMed("Datos de ejemplo hipotéticos cargados.", "bien");
+  mostrarMed();
+  refrescarGraficas();
+}
+
+function mostrarMed() {
+  const lista = leerMed();
+  const tb = $("tabla-med").querySelector("tbody");
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7a6652">Todavía no hay mediciones.</td></tr>';
+    $("resumen-med").textContent = "";
+    return;
+  }
+  let suma = 0, cuenta = 0;
+  tb.innerHTML = lista.map((d, i) => {
+    let modelo = "—", dif = "—";
+    if (ultimo) {
+      const v = exacta(d.t, ultimo.p);
+      modelo = fmt(v, 2);
+      dif = fmt(d.y - v, 2);
+      suma += Math.abs(d.y - v);
+      cuenta++;
+    }
+    return "<tr><td>" + (i + 1) + "</td><td>" + fmt(d.t, 2) + "</td><td>" + fmt(d.y, 2) + "</td><td>" + modelo +
+      "</td><td>" + dif + '</td><td><button class="peligro chico" data-borrar-med="' + i + '">Borrar</button></td></tr>';
+  }).join("");
+  $("resumen-med").textContent = cuenta
+    ? "Diferencia promedio entre tus mediciones y el modelo: " + fmt(suma / cuenta, 2) + " familias."
+    : "Ejecuta una simulación válida para comparar tus mediciones con el modelo.";
+}
+
+/*
+  Estimación de r con los datos medidos.
+  De la solución exacta: ln( y/(K-y) ) = ln( y0/(K-y0) ) + r t   (es una recta en t).
+  Ajuste por mínimos cuadrados (recta que parte de t = 0):
+     r = suma[ t * z ] / suma[ t^2 ]   con   z = ln( y/(K-y) ) - ln( y0/(K-y0) )
+*/
+function estimarR() {
+  const y0 = parseFloat($("y0").value);
+  const K = parseFloat($("K").value);
+  if (!(K > 0) || !(y0 > 0) || !(y0 < K)) { mensajeMed("Primero escribe un K y un y₀ válidos (y₀ mayor que 0 y menor que K).", "mal"); return; }
+  const datos = leerMed().filter((d) => d.t > 0 && d.y > 0 && d.y < K);
+  if (!datos.length) { mensajeMed("Agrega al menos una medición con semana mayor que 0 y familias entre 0 y K.", "mal"); return; }
+  const base = Math.log(y0 / (K - y0));
+  let num = 0, den = 0;
+  datos.forEach((d) => {
+    const z = Math.log(d.y / (K - d.y)) - base;
+    num += d.t * z;
+    den += d.t * d.t;
+  });
+  const r = num / den;
+  if (!(r > 0)) { mensajeMed("Con esos datos las familias no aumentan, no se puede estimar r. Revisa las mediciones.", "mal"); return; }
+  $("r").value = +r.toFixed(4);
+  mensajeMed("r estimado con tus " + datos.length + " mediciones: " + r.toFixed(4) + " por semana. Ya se colocó en el campo r.", "bien");
+  ejecutar();
+}
+
+/* ============================================================
+   HISTORIAL DE SIMULACIONES (localStorage)
+   ============================================================ */
+function leerBD() {
+  try {
+    const txt = localStorage.getItem(DB_HIST);
+    const l = txt ? JSON.parse(txt) : [];
+    return Array.isArray(l) ? l : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function escribirBD(lista) {
+  try {
+    localStorage.setItem(DB_HIST, JSON.stringify(lista));
+    return true;
+  } catch (e) {
+    alert("No se pudo guardar en el navegador (almacenamiento no disponible).");
+    return false;
+  }
+}
+
+function guardarSimulacion() {
+  if (!ultimo) {
+    alert("Primero ejecuta una simulación válida.");
+    return;
+  }
+  const { p, sim } = ultimo;
+  const lista = leerBD();
+  lista.push({
+    fecha: new Date().toLocaleString("es-BO"),
+    y0: p.y0, K: p.K, r: p.r, h: sim.h, T: sim.tFin,
+    maxH: sim.maxH, maxM: sim.maxM, maxR: sim.maxR
+  });
+  if (escribirBD(lista)) mostrarHistorial();
+}
+
+function mostrarHistorial() {
+  const lista = leerBD();
+  const tb = $("tabla-hist").querySelector("tbody");
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#7a6652">Todavía no hay simulaciones guardadas.</td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map((r, i) =>
+    "<tr><td>" + (i + 1) + "</td><td>" + esc(r.fecha) + "</td><td>" + r.y0 + "</td><td>" + r.K + "</td><td>" + r.r +
+    "</td><td>" + fmt(r.h, 3) + "</td><td>" + fmt(r.T, 2) + "</td><td>" + fmt(r.maxH, 4) + "</td><td>" + fmt(r.maxM, 4) +
+    "</td><td>" + fmt(r.maxR, 4) + '</td><td><button class="peligro chico" data-borrar="' + i + '">Borrar</button></td></tr>'
+  ).join("");
+}
+
+function borrarFila(i) {
+  const lista = leerBD();
+  lista.splice(i, 1);
+  escribirBD(lista);
+  mostrarHistorial();
+}
+
+function borrarTodo() {
+  if (confirm("¿Borrar todo el historial de simulaciones?")) {
+    escribirBD([]);
+    mostrarHistorial();
+  }
+}
+
+/* ============================================================
+   EXPORTAR CSV
+   ============================================================ */
+function descargarCSV(nombre, filas) {
+  const csv = "\uFEFF" + filas.map((r) => r.join(";")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvTabla() {
+  if (!ultimo) { alert("Primero ejecuta una simulación válida."); return; }
+  const s = ultimo.sim;
+  const v = (x) => (isNaN(x) ? "" : x);
+  const filas = [["n", "t_semanas", "analitica", "heun", "rk2", "rk4",
+    "error_abs_heun", "error_abs_rk2", "error_abs_rk4",
+    "error_rel_pct_heun", "error_rel_pct_rk2", "error_rel_pct_rk4"]];
+  for (let i = 0; i <= s.n; i++) {
+    filas.push([i, s.t[i], s.ex[i], s.he[i], s.r2[i], s.r4[i], s.eH[i], s.eM[i], s.eR[i], v(s.rH[i]), v(s.rM[i]), v(s.rR[i])]);
+  }
+  descargarCSV("tabla_simulacion_edo.csv", filas);
+}
+
+function csvHistorial() {
+  const lista = leerBD();
+  if (!lista.length) { alert("El historial está vacío."); return; }
+  const filas = [["fecha", "y0", "K", "r", "h", "T", "error_max_heun", "error_max_rk2", "error_max_rk4"]];
+  lista.forEach((x) => filas.push([x.fecha, x.y0, x.K, x.r, x.h, x.T, x.maxH, x.maxM, x.maxR]));
+  descargarCSV("historial_simulaciones_edo.csv", filas);
+}
+
+/* ============================================================
+   INICIO
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  $("h-nombre").textContent = AUTOR.nombre;
+  $("pie").textContent = AUTOR.nombre + " | " + AUTOR.carrera + " | " + AUTOR.universidad;
+
+  $("btn-simular").addEventListener("click", ejecutar);
+  $("btn-guardar").addEventListener("click", guardarSimulacion);
+  $("btn-csv").addEventListener("click", csvTabla);
+  $("btn-hist-csv").addEventListener("click", csvHistorial);
+  $("btn-hist-borrar").addEventListener("click", borrarTodo);
+
+  $("btn-med-agregar").addEventListener("click", agregarMed);
+  $("btn-med-estimar").addEventListener("click", estimarR);
+  $("btn-med-ejemplo").addEventListener("click", cargarEjemplo);
+  $("btn-med-borrar").addEventListener("click", borrarMedTodo);
+
+  document.querySelectorAll("[data-preset]").forEach((b) =>
+    b.addEventListener("click", () => aplicarPreset(b.getAttribute("data-preset")))
+  );
+
+  $("tabla-hist").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-borrar]");
+    if (b) borrarFila(parseInt(b.getAttribute("data-borrar"), 10));
+  });
+
+  $("tabla-med").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-borrar-med]");
+    if (b) borrarMedFila(parseInt(b.getAttribute("data-borrar-med"), 10));
+  });
+
+  // Enter dentro de los campos: simular o agregar medición
+  ["y0", "K", "r", "h", "T", "meta"].forEach((id) =>
+    $(id).addEventListener("keydown", (ev) => { if (ev.key === "Enter") ejecutar(); })
+  );
+  ["tmed", "ymed"].forEach((id) =>
+    $(id).addEventListener("keydown", (ev) => { if (ev.key === "Enter") agregarMed(); })
+  );
+
+  // Redibujar las gráficas si cambia el tamaño de la ventana
+  window.addEventListener("resize", () => {
+    if (ultimo) { graficarSolucion(ultimo.p, ultimo.sim); graficarErrores(ultimo.sim); }
+  });
+
+  mostrarHistorial();
+  ejecutar();
+});
+</script>
+</body>
+</html>
